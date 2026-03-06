@@ -32,9 +32,15 @@ export class DemoRequestController {
     try {
       const request = await demoRequestService.create(req.body);
 
+      console.log(`[DemoRequest] New demo request from ${req.body.contactName} (${req.body.email}) - RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'NOT SET'}`);
+
       // Send confirmation email to client + notification to admin
-      emailService.sendDemoRequestConfirmation(req.body).catch(() => {});
-      emailService.sendDemoRequestNotification(req.body).catch(() => {});
+      emailService.sendDemoRequestConfirmation(req.body).catch((err) => {
+        console.error('[DemoRequest] Failed to send confirmation email:', err?.message || err);
+      });
+      emailService.sendDemoRequestNotification(req.body).catch((err) => {
+        console.error('[DemoRequest] Failed to send admin notification:', err?.message || err);
+      });
 
       return success(res, request, 'Solicitud de demo enviada exitosamente', 201);
     } catch (err: any) {
