@@ -1,0 +1,436 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  HOTEL_ADMIN
+  GUEST
+}
+
+enum RoomStatus {
+  AVAILABLE
+  RESERVED
+  OCCUPIED
+  MAINTENANCE
+  CLEANING
+}
+
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum IntervalUnit {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  PENDING_PAYMENT
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  EXPIRED
+}
+
+enum SubPaymentMethod {
+  CASH
+  TRANSFER
+  YAPE
+  PLIN
+  CARD
+  OTHER
+}
+
+enum DemoRequestStatus {
+  PENDING
+  CONTACTED
+  CONVERTED
+  REJECTED
+}
+
+enum DocumentType {
+  DNI
+  PASSPORT
+  CE
+  RUC
+  OTHER
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  phone     String?
+  role      Role     @default(GUEST)
+  resetToken    String?
+  resetTokenExp DateTime?
+  hotelId   String?
+  hotel     Hotel?   @relation(fields: [hotelId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reservations Reservation[]
+
+  @@map("users")
+}
+
+model Hotel {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  address         String
+  city            String
+  country         String
+  phone           String?
+  email           String?
+  logoUrl         String?
+  coverImageUrl   String?
+  isActive        Boolean  @default(true)
+  culqiPublicKey  String?
+  culqiSecretKey  String?
+  checkInFrom     String?
+  checkInUntil    String?
+  checkOutUntil   String?
+  ruc             String?
+  businessName    String?
+  fiscalAddress   String?
+  serieBoleta            String   @default("B001")
+  nextFolio              Int      @default(1)
+  earlyCheckoutPolicy    String   @default("CHARGE_ACTUAL")
+  earlyCheckoutPenalty   Float    @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  users             User[]
+  rooms             Room[]
+  roomCategories    RoomCategory[]
+  reservations      Reservation[]
+  guests            Guest[]
+  productCategories ProductCategory[]
+  products          Product[]
+  productSales      ProductSale[]
+  sales             Sale[]
+  subscriptions     Subscription[]
+  notifications     Notification[]
+  reviews           Review[]
+
+  @@map("hotels")
+}
+
+model RoomCategory {
+  id            String   @id @default(uuid())
+  hotelId       String
+  hotel         Hotel    @relation(fields: [hotelId], references: [id])
+  name          String
+  slug          String
+  description   String?
+  capacity      Int
+  pricePerNight Float
+  amenities     String[] @default([])
+  coverImageUrl String?
+  galleryImages String[] @default([])
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  rooms        Room[]
+  reservations Reservation[]
+  reviews      Review[]
+
+  @@unique([hotelId, slug])
+  @@map("room_categories")
+}
+
+model Room {
+  id         String     @id @default(uuid())
+  hotelId    String
+  hotel      Hotel      @relation(fields: [hotelId], references: [id])
+  categoryId String
+  category   RoomCategory @relation(fields: [categoryId], references: [id])
+  roomNumber String
+  name       String
+  status     RoomStatus @default(AVAILABLE)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  reservations Reservation[]
+  productSales ProductSale[]
+
+  @@unique([hotelId, roomNumber])
+  @@map("rooms")
+}
+
+model Reservation {
+  id                     String            @id @default(uuid())
+  hotelId                String
+  hotel                  Hotel             @relation(fields: [hotelId], references: [id])
+  categoryId             String
+  category               RoomCategory      @relation(fields: [categoryId], references: [id])
+  roomId                 String?
+  room                   Room?             @relation(fields: [roomId], references: [id])
+  userId                 String?
+  user                   User?             @relation(fields: [userId], references: [id])
+  guestId                String?
+  guest                  Guest?            @relation(fields: [guestId], references: [id])
+  guestFirstName         String
+  guestLastName          String
+  guestEmail             String
+  guestPhone             String?
+  checkIn                DateTime
+  checkOut               DateTime
+  numberOfGuests         Int
+  totalPrice             Float
+  notes                  String?
+  status                 ReservationStatus @default(PENDING)
+  paymentStatus          PaymentStatus     @default(PENDING)
+  culqiChargeId          String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  productSales ProductSale[]
+  sale         Sale?
+
+  @@map("reservations")
+}
+
+model Guest {
+  id             String       @id @default(uuid())
+  hotelId        String
+  hotel          Hotel        @relation(fields: [hotelId], references: [id])
+  documentType   DocumentType
+  documentNumber String
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  reservations Reservation[]
+  sales        Sale[]        @relation("SaleGuest")
+
+  @@unique([hotelId, documentType, documentNumber])
+  @@map("guests")
+}
+
+model ProductCategory {
+  id          String   @id @default(uuid())
+  hotelId     String
+  hotel       Hotel    @relation(fields: [hotelId], references: [id])
+  name        String
+  description String?
+  imageUrl    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  products Product[]
+
+  @@map("product_categories")
+}
+
+model Product {
+  id          String          @id @default(uuid())
+  hotelId     String
+  hotel       Hotel           @relation(fields: [hotelId], references: [id])
+  categoryId  String
+  category    ProductCategory @relation(fields: [categoryId], references: [id])
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  stock       Int             @default(0)
+  isActive    Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  productSales ProductSale[]
+
+  @@map("products")
+}
+
+model ProductSale {
+  id            String       @id @default(uuid())
+  hotelId       String
+  hotel         Hotel        @relation(fields: [hotelId], references: [id])
+  productId     String
+  product       Product      @relation(fields: [productId], references: [id])
+  roomId        String
+  room          Room         @relation(fields: [roomId], references: [id])
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  quantity      Int
+  unitPrice     Float
+  totalPrice    Float
+  createdAt     DateTime     @default(now())
+
+  @@map("product_sales")
+}
+
+model Sale {
+  id               String      @id @default(uuid())
+  hotelId          String
+  hotel            Hotel       @relation(fields: [hotelId], references: [id])
+  reservationId    String      @unique
+  reservation      Reservation @relation(fields: [reservationId], references: [id])
+  guestId          String?
+  guest            Guest?      @relation("SaleGuest", fields: [guestId], references: [id])
+  serie            String
+  folio            Int
+  subtotalRoom     Float
+  subtotalProducts Float
+  total            Float
+  createdAt        DateTime    @default(now())
+
+  @@unique([hotelId, serie, folio])
+  @@map("sales")
+}
+
+model Plan {
+  id           String      @id @default(uuid())
+  name         String
+  slug         String      @unique
+  description  String?
+  features     String[]    @default([])
+  isActive     Boolean     @default(true)
+  displayOrder Int         @default(0)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  prices PlanPrice[]
+
+  @@map("plans")
+}
+
+model PlanPrice {
+  id            String       @id @default(uuid())
+  planId        String
+  plan          Plan         @relation(fields: [planId], references: [id])
+  intervalCount Int
+  intervalUnit  IntervalUnit
+  price         Float
+  currency      String       @default("PEN")
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+
+  subscriptions Subscription[]
+
+  @@map("plan_prices")
+}
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  hotelId            String
+  hotel              Hotel              @relation(fields: [hotelId], references: [id])
+  planPriceId        String?
+  planPrice          PlanPrice?         @relation(fields: [planPriceId], references: [id])
+  status             SubscriptionStatus @default(TRIALING)
+  trialStartDate     DateTime?
+  trialEndDate       DateTime?
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  totalPrice         Float              @default(0)
+  paidAmount         Float              @default(0)
+  cancelledAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  culqiSubscriptionId String?
+  culqiCustomerId     String?
+  culqiCardId         String?
+
+  payments SubscriptionPayment[]
+
+  @@index([hotelId])
+  @@map("subscriptions")
+}
+
+model SubscriptionPayment {
+  id             String           @id @default(uuid())
+  subscriptionId String
+  subscription   Subscription     @relation(fields: [subscriptionId], references: [id])
+  amount         Float
+  method         SubPaymentMethod
+  notes          String?
+  receiptNumber  String?
+  registeredBy   String
+  createdAt      DateTime         @default(now())
+
+  @@map("subscription_payments")
+}
+
+enum NotificationType {
+  NEW_RESERVATION
+  RESERVATION_CANCELLED
+  RESERVATION_CHECKED_IN
+  RESERVATION_CHECKED_OUT
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  hotelId   String
+  hotel     Hotel            @relation(fields: [hotelId], references: [id])
+  type      NotificationType
+  title     String
+  message   String
+  data      Json?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  @@index([hotelId, isRead])
+  @@index([hotelId, createdAt])
+  @@map("notifications")
+}
+
+model DemoRequest {
+  id            String            @id @default(uuid())
+  businessName  String
+  contactName   String
+  email         String
+  phone         String?
+  city          String?
+  numberOfRooms Int?
+  message       String?
+  status        DemoRequestStatus @default(PENDING)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@map("demo_requests")
+}
+
+model Review {
+  id         String       @id @default(uuid())
+  hotelId    String
+  hotel      Hotel        @relation(fields: [hotelId], references: [id])
+  categoryId String
+  category   RoomCategory @relation(fields: [categoryId], references: [id])
+  guestName  String
+  rating     Int
+  comment    String?
+  createdAt  DateTime     @default(now())
+
+  @@map("reviews")
+}
