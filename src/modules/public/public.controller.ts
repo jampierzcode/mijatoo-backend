@@ -3,11 +3,13 @@ import { PublicService } from './public.service';
 import { UploadService } from '../upload/upload.service';
 import { PlanService } from '../plan/plan.service';
 import { DemoRequestService } from '../demo-request/demo-request.service';
+import { EmailService } from '../email/email.service';
 import { success, error } from '../../utils/apiResponse';
 
 const publicService = new PublicService();
 const planService = new PlanService();
 const demoRequestService = new DemoRequestService();
+const emailService = new EmailService();
 
 export class PublicController {
   async listHotels(_req: Request, res: Response) {
@@ -31,6 +33,15 @@ export class PublicController {
   async createDemoRequest(req: Request, res: Response) {
     try {
       const request = await demoRequestService.create(req.body);
+
+      // Send confirmation email to client + notification to admin
+      emailService.sendDemoRequestConfirmation(req.body).catch((err) => {
+        console.error('[DemoRequest] Failed to send confirmation email:', err?.message || err);
+      });
+      emailService.sendDemoRequestNotification(req.body).catch((err) => {
+        console.error('[DemoRequest] Failed to send admin notification:', err?.message || err);
+      });
+
       return success(res, request, 'Solicitud de demo enviada exitosamente', 201);
     } catch (err: any) {
       return error(res, err.message);
