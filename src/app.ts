@@ -53,6 +53,7 @@ app.use(errorHandler);
 
 app.listen(env.PORT, () => {
   console.log(`Server running on port ${env.PORT}`);
+  console.log(`[Config] RESEND_API_KEY: ${process.env.RESEND_API_KEY ? 'SET' : 'NOT SET'} | RESEND_FROM_EMAIL: ${process.env.RESEND_FROM_EMAIL || 'NOT SET'} | ADMIN_EMAIL: ${process.env.ADMIN_NOTIFICATION_EMAIL || 'NOT SET'}`);
 });
 
 export default app;
