@@ -1,10 +1,12 @@
 import { Request, Response } from 'express';
 import { DemoRequestService } from './demo-request.service';
 import { HotelService } from '../hotel/hotel.service';
+import { EmailService } from '../email/email.service';
 import { success, error } from '../../utils/apiResponse';
 
 const demoRequestService = new DemoRequestService();
 const hotelService = new HotelService();
+const emailService = new EmailService();
 
 export class DemoRequestController {
   async findAll(req: Request, res: Response) {
@@ -29,6 +31,10 @@ export class DemoRequestController {
   async create(req: Request, res: Response) {
     try {
       const request = await demoRequestService.create(req.body);
+
+      // Send email notification to admin
+      emailService.sendDemoRequestNotification(req.body).catch(() => {});
+
       return success(res, request, 'Solicitud de demo enviada exitosamente', 201);
     } catch (err: any) {
       return error(res, err.message);

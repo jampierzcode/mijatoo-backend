@@ -17,6 +17,84 @@ interface ReservationEmailData {
 }
 
 export class EmailService {
+  async sendDemoRequestNotification(data: {
+    businessName: string;
+    contactName: string;
+    email: string;
+    phone?: string;
+    city?: string;
+    numberOfRooms?: number;
+    message?: string;
+  }) {
+    if (!resend) {
+      console.log('[Email] Resend not configured, skipping demo request notification');
+      return;
+    }
+
+    const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'jampierv127@gmail.com';
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
+          <tr>
+            <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo - Nueva Solicitud de Demo</h1>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:32px;">
+              <h2 style="color:#111827;font-size:18px;margin:0 0 16px 0;">Nueva solicitud de demo</h2>
+              <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px 0;">
+                <strong>${data.contactName}</strong> de <strong>${data.businessName}</strong> ha solicitado una demo.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
+                <tr>
+                  <td style="padding:16px;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Negocio</span><br><span style="color:#111827;font-size:15px;font-weight:600;">${data.businessName}</span></td></tr>
+                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Contacto</span><br><span style="color:#111827;font-size:15px;">${data.contactName}</span></td></tr>
+                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Email</span><br><span style="color:#111827;font-size:15px;">${data.email}</span></td></tr>
+                      ${data.phone ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Telefono</span><br><span style="color:#111827;font-size:15px;">${data.phone}</span></td></tr>` : ''}
+                      ${data.city ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Ciudad</span><br><span style="color:#111827;font-size:15px;">${data.city}</span></td></tr>` : ''}
+                      ${data.numberOfRooms ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Habitaciones</span><br><span style="color:#111827;font-size:15px;">${data.numberOfRooms}</span></td></tr>` : ''}
+                      ${data.message ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Mensaje</span><br><span style="color:#111827;font-size:15px;">${data.message}</span></td></tr>` : ''}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    try {
+      const result = await resend.emails.send({
+        from: `MiJatoo <${fromEmail}>`,
+        to: adminEmail,
+        subject: `Nueva solicitud de demo - ${data.businessName}`,
+        html,
+      });
+      console.log(`[Email] Demo request notification sent to ${adminEmail}`, result);
+    } catch (err: any) {
+      console.error('[Email] Failed to send demo request notification:', err?.message || err);
+    }
+  }
+
   async sendNewSubscriptionNotification(data: {
     hotelName: string;
     planName: string;
@@ -44,7 +122,7 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:20px;margin:0;">Jato - Notificacion</h1>
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo - Notificacion</h1>
             </td>
           </tr>
           <tr>
@@ -88,7 +166,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0;">Jato - Sistema de gestion hotelera</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
             </td>
           </tr>
         </table>
@@ -100,7 +178,7 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `Jato <${fromEmail}>`,
+        from: `MiJatoo <${fromEmail}>`,
         to: adminEmail,
         subject,
         html,
@@ -131,7 +209,7 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:20px;margin:0;">Jato</h1>
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo</h1>
             </td>
           </tr>
           <tr>
@@ -156,7 +234,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0;">Jato - Sistema de gestion hotelera</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
             </td>
           </tr>
         </table>
@@ -168,9 +246,9 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `Jato <${fromEmail}>`,
+        from: `MiJatoo <${fromEmail}>`,
         to: data.email,
-        subject: 'Restablecer contraseña - Jato',
+        subject: 'Restablecer contraseña - MiJatoo',
         html,
       });
       console.log(`[Email] Password reset email sent to ${data.email}`, result);
@@ -210,7 +288,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="background-color:#6366f1;padding:32px 40px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:24px;margin:0 0 8px 0;font-weight:700;">Jato</h1>
+              <h1 style="color:#ffffff;font-size:24px;margin:0 0 8px 0;font-weight:700;">MiJatoo</h1>
               <p style="color:#c7d2fe;font-size:14px;margin:0;">Confirmacion de Reserva</p>
             </td>
           </tr>
@@ -305,7 +383,7 @@ export class EmailService {
           <tr>
             <td style="background-color:#f9fafb;padding:20px 40px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
               <p style="color:#9ca3af;font-size:12px;margin:0;">
-                Este correo fue enviado por <strong style="color:#6366f1;">Jato</strong> en nombre de ${data.hotelName}
+                Este correo fue enviado por <strong style="color:#6366f1;">MiJatoo</strong> en nombre de ${data.hotelName}
               </p>
             </td>
           </tr>
@@ -320,7 +398,7 @@ export class EmailService {
       // With onboarding@resend.dev you can only send TO the account owner's email.
       // To send to any guest, verify your own domain in Resend dashboard.
       const from = fromEmail === 'onboarding@resend.dev'
-        ? 'Jato <onboarding@resend.dev>'
+        ? 'MiJatoo <onboarding@resend.dev>'
         : `${data.hotelName} <${fromEmail}>`;
 
       const result = await resend.emails.send({
