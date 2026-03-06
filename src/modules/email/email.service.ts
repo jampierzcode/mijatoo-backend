@@ -17,6 +17,101 @@ interface ReservationEmailData {
 }
 
 export class EmailService {
+  async sendDemoRequestConfirmation(data: {
+    businessName: string;
+    contactName: string;
+    email: string;
+  }) {
+    if (!resend) {
+      console.log('[Email] Resend not configured, skipping demo confirmation email');
+      return;
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
+          <tr>
+            <td style="background-color:#6366f1;padding:32px;border-radius:12px 12px 0 0;text-align:center;">
+              <h1 style="color:#ffffff;font-size:24px;margin:0 0 4px 0;font-weight:700;">MiJatoo</h1>
+              <p style="color:#c7d2fe;font-size:13px;margin:0;">Gestion Hotelera Inteligente</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:32px;">
+              <h2 style="color:#111827;font-size:20px;margin:0 0 16px 0;">Hola ${data.contactName},</h2>
+              <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 20px 0;">
+                Hemos recibido tu solicitud de demo para <strong>${data.businessName}</strong>. Nuestro equipo ya esta revisando tu informacion.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef2ff;border-radius:8px;border:1px solid #c7d2fe;">
+                <tr>
+                  <td style="padding:20px;">
+                    <p style="color:#4338ca;font-size:15px;font-weight:600;margin:0 0 8px 0;">Que sigue?</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">1</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Un miembro de nuestro equipo revisara tu solicitud.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">2</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Te contactaremos en menos de <strong>24 horas</strong> para coordinar tu demo personalizada.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">3</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Configuraremos tu hotel en la plataforma y te daremos acceso con <strong>7 dias de prueba gratis</strong>.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <p style="color:#6b7280;font-size:14px;line-height:1.6;margin:20px 0 0 0;">
+                Mientras tanto, puedes conocer mas sobre nuestras funcionalidades en <a href="https://mijatoo.com/funcionalidades" style="color:#6366f1;text-decoration:underline;">mijatoo.com</a>.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:20px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;">MiJatoo - Sistema de gestion hotelera para Peru</p>
+              <p style="color:#9ca3af;font-size:11px;margin:0;">hola@mijatoo.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    try {
+      const result = await resend.emails.send({
+        from: `MiJatoo <${fromEmail}>`,
+        to: data.email,
+        subject: `Recibimos tu solicitud - MiJatoo`,
+        html,
+      });
+      console.log(`[Email] Demo confirmation sent to ${data.email}`, result);
+    } catch (err: any) {
+      console.error('[Email] Failed to send demo confirmation:', err?.message || err);
+    }
+  }
+
   async sendDemoRequestNotification(data: {
     businessName: string;
     contactName: string;
@@ -32,6 +127,7 @@ export class EmailService {
     }
 
     const adminEmail = process.env.ADMIN_NOTIFICATION_EMAIL || 'jampierv127@gmail.com';
+    const adminUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
 
     const html = `
 <!DOCTYPE html>
@@ -44,27 +140,35 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo - Nueva Solicitud de Demo</h1>
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">Nueva Solicitud de Demo</h1>
             </td>
           </tr>
           <tr>
             <td style="background-color:#ffffff;padding:32px;">
-              <h2 style="color:#111827;font-size:18px;margin:0 0 16px 0;">Nueva solicitud de demo</h2>
               <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px 0;">
-                <strong>${data.contactName}</strong> de <strong>${data.businessName}</strong> ha solicitado una demo.
+                <strong>${data.contactName}</strong> de <strong>${data.businessName}</strong> ha solicitado una demo de MiJatoo.
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
                 <tr>
                   <td style="padding:16px;">
                     <table width="100%" cellpadding="0" cellspacing="0">
-                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Negocio</span><br><span style="color:#111827;font-size:15px;font-weight:600;">${data.businessName}</span></td></tr>
-                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Contacto</span><br><span style="color:#111827;font-size:15px;">${data.contactName}</span></td></tr>
-                      <tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Email</span><br><span style="color:#111827;font-size:15px;">${data.email}</span></td></tr>
-                      ${data.phone ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Telefono</span><br><span style="color:#111827;font-size:15px;">${data.phone}</span></td></tr>` : ''}
-                      ${data.city ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Ciudad</span><br><span style="color:#111827;font-size:15px;">${data.city}</span></td></tr>` : ''}
-                      ${data.numberOfRooms ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Habitaciones</span><br><span style="color:#111827;font-size:15px;">${data.numberOfRooms}</span></td></tr>` : ''}
-                      ${data.message ? `<tr><td style="padding:4px 0;"><span style="color:#9ca3af;font-size:12px;text-transform:uppercase;">Mensaje</span><br><span style="color:#111827;font-size:15px;">${data.message}</span></td></tr>` : ''}
+                      <tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Negocio</span><br><span style="color:#111827;font-size:15px;font-weight:600;">${data.businessName}</span></td></tr>
+                      <tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Contacto</span><br><span style="color:#111827;font-size:15px;">${data.contactName}</span></td></tr>
+                      <tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Email</span><br><a href="mailto:${data.email}" style="color:#6366f1;font-size:15px;text-decoration:none;">${data.email}</a></td></tr>
+                      ${data.phone ? `<tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Telefono</span><br><span style="color:#111827;font-size:15px;">${data.phone}</span></td></tr>` : ''}
+                      ${data.city ? `<tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Ciudad</span><br><span style="color:#111827;font-size:15px;">${data.city}</span></td></tr>` : ''}
+                      ${data.numberOfRooms ? `<tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Habitaciones</span><br><span style="color:#111827;font-size:15px;">${data.numberOfRooms}</span></td></tr>` : ''}
+                      ${data.message ? `<tr><td style="padding:6px 0;"><span style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Mensaje</span><br><span style="color:#111827;font-size:15px;">${data.message}</span></td></tr>` : ''}
                     </table>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${adminUrl}/demo-requests" style="display:inline-block;background-color:#6366f1;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                      Ver en el panel de administracion
+                    </a>
                   </td>
                 </tr>
               </table>

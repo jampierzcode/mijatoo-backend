@@ -32,7 +32,8 @@ export class DemoRequestController {
     try {
       const request = await demoRequestService.create(req.body);
 
-      // Send email notification to admin
+      // Send confirmation email to client + notification to admin
+      emailService.sendDemoRequestConfirmation(req.body).catch(() => {});
       emailService.sendDemoRequestNotification(req.body).catch(() => {});
 
       return success(res, request, 'Solicitud de demo enviada exitosamente', 201);
