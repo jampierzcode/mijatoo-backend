@@ -283,3 +283,16 @@ export const createDemoRequestSchema = z.object({
 export const updateDemoRequestStatusSchema = z.object({
   status: z.enum(['PENDING', 'CONTACTED', 'CONVERTED', 'REJECTED']),
 });
+
+// Public hotel registration schema
+export const publicRegisterSchema = z.object({
+  hotelName: z.string().min(1, 'Nombre del hotel es requerido'),
+  slug: z.string().min(1, 'Slug es requerido').regex(/^[a-z0-9-]+$/, 'Slug solo puede contener letras minúsculas, números y guiones'),
+  address: z.string().min(1, 'Dirección es requerida'),
+  city: z.string().min(1, 'Ciudad es requerida'),
+  phone: z.string().optional(),
+  firstName: z.string().min(1, 'Nombre es requerido'),
+  lastName: z.string().min(1, 'Apellido es requerido'),
+  email: z.string().email('Email inválido'),
+  password: z.string().min(6, 'Contraseña debe tener al menos 6 caracteres'),
+});

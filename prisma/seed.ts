@@ -21,9 +21,9 @@ async function main() {
   });
   console.log('Super Admin created:', superAdmin.email);
 
-  // Create MiJatoo Plan - single plan, same price for everyone
+  // Create Mijatoo Plan - single plan, same price for everyone
   const planData = {
-    name: 'MiJatoo',
+    name: 'Mijatoo',
     slug: 'mijatoo',
     description: 'Acceso completo a todas las funcionalidades. Sin limites, sin restricciones.',
     features: [
@@ -53,9 +53,9 @@ async function main() {
         currency: 'PEN',
       },
     });
-    console.log('Plan MiJatoo created: S/15.00/mes');
+    console.log('Plan Mijatoo created: S/15.00/mes');
   } else {
-    console.log('Plan MiJatoo already exists, skipping.');
+    console.log('Plan Mijatoo already exists, skipping.');
   }
 
   console.log('\nSeed completed!');
@@ -65,7 +65,6 @@ async function main() {
 main()
   .catch((e) => {
     console.error(e);
-    process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();

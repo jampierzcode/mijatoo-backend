@@ -38,7 +38,7 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:24px;margin:0 0 4px 0;font-weight:700;">MiJatoo</h1>
+              <h1 style="color:#ffffff;font-size:24px;margin:0 0 4px 0;font-weight:700;">Mijatoo</h1>
               <p style="color:#c7d2fe;font-size:13px;margin:0;">Gestion Hotelera Inteligente</p>
             </td>
           </tr>
@@ -88,7 +88,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:20px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;">MiJatoo - Sistema de gestion hotelera para Peru</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;">Mijatoo - Sistema de gestion hotelera para Peru</p>
               <p style="color:#9ca3af;font-size:11px;margin:0;">hola@mijatoo.com</p>
             </td>
           </tr>
@@ -101,9 +101,9 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `MiJatoo <${fromEmail}>`,
+        from: `Mijatoo <${fromEmail}>`,
         to: data.email,
-        subject: `Recibimos tu solicitud - MiJatoo`,
+        subject: `Recibimos tu solicitud - Mijatoo`,
         html,
       });
       console.log(`[Email] Demo confirmation sent to ${data.email}`, result);
@@ -146,7 +146,7 @@ export class EmailService {
           <tr>
             <td style="background-color:#ffffff;padding:32px;">
               <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px 0;">
-                <strong>${data.contactName}</strong> de <strong>${data.businessName}</strong> ha solicitado una demo de MiJatoo.
+                <strong>${data.contactName}</strong> de <strong>${data.businessName}</strong> ha solicitado una demo de Mijatoo.
               </p>
               <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9fafb;border-radius:8px;border:1px solid #e5e7eb;">
                 <tr>
@@ -176,7 +176,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0;">Mijatoo - Sistema de gestion hotelera</p>
             </td>
           </tr>
         </table>
@@ -188,7 +188,7 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `MiJatoo <${fromEmail}>`,
+        from: `Mijatoo <${fromEmail}>`,
         to: adminEmail,
         subject: `Nueva solicitud de demo - ${data.businessName}`,
         html,
@@ -226,7 +226,7 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo - Notificacion</h1>
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">Mijatoo - Notificacion</h1>
             </td>
           </tr>
           <tr>
@@ -270,7 +270,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0;">Mijatoo - Sistema de gestion hotelera</p>
             </td>
           </tr>
         </table>
@@ -282,7 +282,7 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `MiJatoo <${fromEmail}>`,
+        from: `Mijatoo <${fromEmail}>`,
         to: adminEmail,
         subject,
         html,
@@ -313,7 +313,7 @@ export class EmailService {
         <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
           <tr>
             <td style="background-color:#6366f1;padding:24px 32px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:20px;margin:0;">MiJatoo</h1>
+              <h1 style="color:#ffffff;font-size:20px;margin:0;">Mijatoo</h1>
             </td>
           </tr>
           <tr>
@@ -338,7 +338,7 @@ export class EmailService {
           </tr>
           <tr>
             <td style="background-color:#f9fafb;padding:16px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
-              <p style="color:#9ca3af;font-size:12px;margin:0;">MiJatoo - Sistema de gestion hotelera</p>
+              <p style="color:#9ca3af;font-size:12px;margin:0;">Mijatoo - Sistema de gestion hotelera</p>
             </td>
           </tr>
         </table>
@@ -350,9 +350,9 @@ export class EmailService {
 
     try {
       const result = await resend.emails.send({
-        from: `MiJatoo <${fromEmail}>`,
+        from: `Mijatoo <${fromEmail}>`,
         to: data.email,
-        subject: 'Restablecer contraseña - MiJatoo',
+        subject: 'Restablecer contraseña - Mijatoo',
         html,
       });
       console.log(`[Email] Password reset email sent to ${data.email}`, result);
@@ -392,7 +392,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="background-color:#6366f1;padding:32px 40px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;font-size:24px;margin:0 0 8px 0;font-weight:700;">MiJatoo</h1>
+              <h1 style="color:#ffffff;font-size:24px;margin:0 0 8px 0;font-weight:700;">Mijatoo</h1>
               <p style="color:#c7d2fe;font-size:14px;margin:0;">Confirmacion de Reserva</p>
             </td>
           </tr>
@@ -487,7 +487,7 @@ export class EmailService {
           <tr>
             <td style="background-color:#f9fafb;padding:20px 40px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
               <p style="color:#9ca3af;font-size:12px;margin:0;">
-                Este correo fue enviado por <strong style="color:#6366f1;">MiJatoo</strong> en nombre de ${data.hotelName}
+                Este correo fue enviado por <strong style="color:#6366f1;">Mijatoo</strong> en nombre de ${data.hotelName}
               </p>
             </td>
           </tr>
@@ -502,7 +502,7 @@ export class EmailService {
       // With onboarding@resend.dev you can only send TO the account owner's email.
       // To send to any guest, verify your own domain in Resend dashboard.
       const from = fromEmail === 'onboarding@resend.dev'
-        ? 'MiJatoo <onboarding@resend.dev>'
+        ? 'Mijatoo <onboarding@resend.dev>'
         : `${data.hotelName} <${fromEmail}>`;
 
       const result = await resend.emails.send({
@@ -514,6 +514,108 @@ export class EmailService {
       console.log(`[Email] Reservation confirmation sent to ${data.guestEmail}`, result);
     } catch (err: any) {
       console.error('[Email] Failed to send reservation confirmation:', err?.message || err);
+    }
+  }
+
+  async sendWelcomeEmail(data: {
+    firstName: string;
+    email: string;
+    hotelName: string;
+    loginUrl: string;
+  }) {
+    if (!resend) {
+      console.log('[Email] Resend not configured, skipping welcome email');
+      return;
+    }
+
+    const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f3f4f6;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="500" cellpadding="0" cellspacing="0" style="max-width:500px;width:100%;">
+          <tr>
+            <td style="background-color:#6366f1;padding:32px;border-radius:12px 12px 0 0;text-align:center;">
+              <h1 style="color:#ffffff;font-size:24px;margin:0 0 4px 0;font-weight:700;">Mijatoo</h1>
+              <p style="color:#c7d2fe;font-size:13px;margin:0;">Bienvenido a la familia</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#ffffff;padding:32px;">
+              <h2 style="color:#111827;font-size:20px;margin:0 0 16px 0;">Hola ${data.firstName},</h2>
+              <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 20px 0;">
+                Tu cuenta y tu hotel <strong>${data.hotelName}</strong> han sido creados exitosamente. Tienes <strong>7 dias de prueba gratis</strong> para explorar todas las funcionalidades.
+              </p>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eef2ff;border-radius:8px;border:1px solid #c7d2fe;">
+                <tr>
+                  <td style="padding:20px;">
+                    <p style="color:#4338ca;font-size:15px;font-weight:600;margin:0 0 8px 0;">Proximos pasos:</p>
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">1</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Inicia sesion en tu panel de administracion.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">2</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Configura tus habitaciones, categorias y precios.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:6px 0;">
+                          <table cellpadding="0" cellspacing="0"><tr>
+                            <td style="vertical-align:top;padding-right:10px;"><span style="display:inline-block;width:24px;height:24px;background-color:#6366f1;color:#fff;border-radius:50%;text-align:center;line-height:24px;font-size:12px;font-weight:700;">3</span></td>
+                            <td style="color:#374151;font-size:14px;line-height:1.5;">Comparte tu pagina publica y empieza a recibir reservas.</td>
+                          </tr></table>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="${data.loginUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+                      Ir al panel de administracion
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#f9fafb;padding:20px 32px;border-radius:0 0 12px 12px;border-top:1px solid #e5e7eb;text-align:center;">
+              <p style="color:#9ca3af;font-size:12px;margin:0 0 4px 0;">Mijatoo - Sistema de gestion hotelera para Peru</p>
+              <p style="color:#9ca3af;font-size:11px;margin:0;">hola@mijatoo.com</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+    try {
+      const result = await resend.emails.send({
+        from: `Mijatoo <${fromEmail}>`,
+        to: data.email,
+        subject: 'Bienvenido a Mijatoo - Tu hotel esta listo',
+        html,
+      });
+      console.log(`[Email] Welcome email sent to ${data.email}`, result);
+    } catch (err: any) {
+      console.error('[Email] Failed to send welcome email:', err?.message || err);
     }
   }
 }

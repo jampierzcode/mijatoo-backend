@@ -4,7 +4,10 @@ import { UploadService } from '../upload/upload.service';
 import { PlanService } from '../plan/plan.service';
 import { DemoRequestService } from '../demo-request/demo-request.service';
 import { EmailService } from '../email/email.service';
-import { success, error } from '../../utils/apiResponse';
+import { HotelService } from '../hotel/hotel.service';
+import { success, error, hashPassword } from '../../utils';
+import { prisma } from '../../config';
+import { TRIAL_DAYS } from '../../shared';
 
 const publicService = new PublicService();
 const planService = new PlanService();
@@ -141,6 +144,96 @@ export class PublicController {
     try {
       const reservation = await publicService.createPublicReservation(req.params.slug, req.body);
       return success(res, reservation, 'Reserva creada exitosamente', 201);
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
+  async register(req: Request, res: Response) {
+    try {
+      const { hotelName, slug, address, city, phone, firstName, lastName, email, password } = req.body;
+
+      // Check email uniqueness
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+      if (existingUser) {
+        return error(res, 'Ya existe una cuenta con este email', 409);
+      }
+
+      // Check slug uniqueness
+      const existingHotel = await prisma.hotel.findUnique({ where: { slug } });
+      if (existingHotel) {
+        return error(res, 'Este slug ya esta en uso. Prueba con otro nombre para tu URL.', 409);
+      }
+
+      const hashedPassword = await hashPassword(password);
+      const now = new Date();
+      const trialEnd = new Date(now);
+      trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
+
+      // Create hotel + subscription + admin user in a single transaction
+      const result = await prisma.$transaction(async (tx) => {
+        const hotel = await tx.hotel.create({
+          data: {
+            name: hotelName,
+            slug,
+            address,
+            city,
+            country: 'Peru',
+            phone: phone || null,
+            email,
+          },
+        });
+
+        await tx.subscription.create({
+          data: {
+            hotelId: hotel.id,
+            status: 'TRIALING',
+            trialStartDate: now,
+            trialEndDate: trialEnd,
+          },
+        });
+
+        const user = await tx.user.create({
+          data: {
+            email,
+            password: hashedPassword,
+            firstName,
+            lastName,
+            phone: phone || null,
+            role: 'HOTEL_ADMIN',
+            hotelId: hotel.id,
+          },
+        });
+
+        return { hotel, user };
+      });
+
+      // Send welcome email async
+      const loginUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      emailService.sendWelcomeEmail({
+        firstName,
+        email,
+        hotelName,
+        loginUrl: `${loginUrl}/login`,
+      }).catch((err) => {
+        console.error('[Register] Failed to send welcome email:', err?.message || err);
+      });
+
+      // Also notify admin about new registration
+      emailService.sendDemoRequestNotification({
+        businessName: hotelName,
+        contactName: `${firstName} ${lastName}`,
+        email,
+        phone: phone || undefined,
+        city,
+      }).catch((err) => {
+        console.error('[Register] Failed to send admin notification:', err?.message || err);
+      });
+
+      return success(res, {
+        hotel: { id: result.hotel.id, name: result.hotel.name, slug: result.hotel.slug },
+        user: { id: result.user.id, email: result.user.email, firstName: result.user.firstName },
+      }, 'Registro exitoso. Tu hotel esta listo con 7 dias de prueba gratis.', 201);
     } catch (err: any) {
       return error(res, err.message);
     }

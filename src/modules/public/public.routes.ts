@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { PublicController } from './public.controller';
 import { validate } from '../../middleware';
-import { publicReservationSchema, createDemoRequestSchema } from '../../shared';
+import { publicReservationSchema, createDemoRequestSchema, publicRegisterSchema } from '../../shared';
 
 const router = Router();
 const controller = new PublicController();
 
 router.get('/hotels', (req, res) => controller.listHotels(req, res));
 router.get('/plans', (req, res) => controller.getPlans(req, res));
+router.post('/register', validate(publicRegisterSchema), (req, res) => controller.register(req, res));
 router.post('/demo-requests', validate(createDemoRequestSchema), (req, res) => controller.createDemoRequest(req, res));
 
 router.get('/hotels/:slug', (req, res) => controller.getHotel(req, res));
