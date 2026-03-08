@@ -196,6 +196,41 @@ export class HotelService {
     });
   }
 
+  async toggleActive(id: string) {
+    const hotel = await prisma.hotel.findUnique({ where: { id } });
+    if (!hotel) throw new Error('Hotel no encontrado');
+
+    return prisma.hotel.update({
+      where: { id },
+      data: { isActive: !hotel.isActive },
+    });
+  }
+
+  async delete(id: string) {
+    const hotel = await prisma.hotel.findUnique({ where: { id } });
+    if (!hotel) throw new Error('Hotel no encontrado');
+
+    // Delete all related data in correct order (FK constraints)
+    await prisma.$transaction(async (tx) => {
+      await tx.notification.deleteMany({ where: { hotelId: id } });
+      await tx.review.deleteMany({ where: { hotelId: id } });
+      await tx.productSale.deleteMany({ where: { hotelId: id } });
+      await tx.sale.deleteMany({ where: { hotelId: id } });
+      await tx.reservation.deleteMany({ where: { hotelId: id } });
+      await tx.product.deleteMany({ where: { hotelId: id } });
+      await tx.productCategory.deleteMany({ where: { hotelId: id } });
+      await tx.room.deleteMany({ where: { hotelId: id } });
+      await tx.roomCategory.deleteMany({ where: { hotelId: id } });
+      await tx.guest.deleteMany({ where: { hotelId: id } });
+      await tx.subscriptionPayment.deleteMany({ where: { subscription: { hotelId: id } } });
+      await tx.subscription.deleteMany({ where: { hotelId: id } });
+      await tx.user.deleteMany({ where: { hotelId: id } });
+      await tx.hotel.delete({ where: { id } });
+    });
+
+    return { message: 'Hotel eliminado exitosamente' };
+  }
+
   async removeAdmin(hotelId: string, userId: string) {
     const user = await prisma.user.findFirst({
       where: { id: userId, hotelId, role: 'HOTEL_ADMIN' },

@@ -82,6 +82,24 @@ export class HotelController {
     }
   }
 
+  async toggleActive(req: Request, res: Response) {
+    try {
+      const hotel = await hotelService.toggleActive(req.params.id);
+      return success(res, hotel, `Hotel ${hotel.isActive ? 'activado' : 'desactivado'} exitosamente`);
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
+  async delete(req: Request, res: Response) {
+    try {
+      const result = await hotelService.delete(req.params.id);
+      return success(res, result, 'Hotel eliminado exitosamente');
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
   async assignAdmin(req: Request, res: Response) {
     try {
       const admin = await hotelService.assignAdmin(req.params.id, req.body);
