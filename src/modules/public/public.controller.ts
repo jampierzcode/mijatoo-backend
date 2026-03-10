@@ -18,6 +18,7 @@ export class PublicController {
   async listHotels(_req: Request, res: Response) {
     try {
       const hotels = await publicService.listActiveHotels();
+      await UploadService.resolveImageFieldsArray(hotels);
       return success(res, hotels);
     } catch (err: any) {
       return error(res, err.message);

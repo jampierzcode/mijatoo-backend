@@ -7,7 +7,7 @@ export class PublicService {
   async listActiveHotels() {
     return prisma.hotel.findMany({
       where: { isActive: true },
-      select: { name: true, slug: true, city: true },
+      select: { name: true, slug: true, city: true, logoUrl: true },
       orderBy: { name: 'asc' },
     });
   }
@@ -20,6 +20,7 @@ export class PublicService {
         city: true, country: true, phone: true, email: true, logoUrl: true,
         coverImageUrl: true, isActive: true,
         checkInFrom: true, checkInUntil: true, checkOutUntil: true,
+        earlyCheckoutPolicy: true, earlyCheckoutPenalty: true,
         _count: { select: { rooms: true } },
       },
     });
