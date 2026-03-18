@@ -15,6 +15,7 @@ router.get('/my/history', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => contr
 router.post('/select-plan', auth, roleGuard(Role.HOTEL_ADMIN), validate(selectPlanSchema), (req, res) => controller.selectPlan(req, res));
 router.post('/subscribe-culqi', auth, roleGuard(Role.HOTEL_ADMIN), validate(subscribeCulqiSchema), (req, res) => controller.subscribeCulqi(req, res));
 router.get('/culqi-public-key', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => controller.getCulqiPublicKey(req, res));
+router.post('/my/cancel', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => controller.cancelMy(req, res));
 
 // SUPER_ADMIN routes
 router.use(auth, roleGuard(Role.SUPER_ADMIN));

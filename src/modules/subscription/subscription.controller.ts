@@ -46,6 +46,19 @@ export class SubscriptionController {
     }
   }
 
+  async cancelMy(req: Request, res: Response) {
+    try {
+      const hotelId = req.user!.hotelId;
+      if (!hotelId) return error(res, 'No tienes un hotel asignado', 400);
+      const subscription = await subscriptionService.findCurrentByHotelId(hotelId);
+      if (!subscription) return error(res, 'No tienes una suscripcion activa', 404);
+      const cancelled = await subscriptionService.cancelSubscription(subscription.id);
+      return success(res, cancelled, 'Suscripcion cancelada');
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
   async getMyHistory(req: Request, res: Response) {
     try {
       const hotelId = req.user!.hotelId;
