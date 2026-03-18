@@ -393,26 +393,53 @@ export class SubscriptionService {
   // =============================================
 
   async handleCulqiWebhook(payload: any) {
-    // Culqi webhook payload can vary - log everything for debugging
-    console.log(`[CulqiWebhook] Full payload:`, JSON.stringify(payload).substring(0, 1000));
+    console.log(`[CulqiWebhook] Full payload:`, JSON.stringify(payload).substring(0, 1500));
 
     const eventType = payload.type || payload.event || payload.object;
-    const data = payload.data || payload;
 
-    console.log(`[CulqiWebhook] Event type: ${eventType}`);
+    // Culqi sends data as a JSON STRING, not an object - parse it
+    let data: any = payload.data || payload;
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        console.log('[CulqiWebhook] Could not parse data string');
+      }
+    }
 
-    // Find subscription ID from various possible locations in the payload
+    console.log(`[CulqiWebhook] Event: ${eventType} | Parsed data:`, JSON.stringify(data).substring(0, 500));
+
+    // Extract subscription ID from Culqi's different payload structures
     const findSubscriptionId = (d: any): string | null => {
-      return d.subscription_id || d.id || d.metadata?.subscription_id ||
-        d.data?.subscription_id || d.data?.id || null;
+      // subscription.creation.succeeded: data.message.object.subsId
+      if (d?.message?.object?.subsId) return d.message.object.subsId;
+      // Direct fields
+      if (d?.subsId) return d.subsId;
+      if (d?.subscription_id) return d.subscription_id;
+      if (d?.metadata?.subscription_id) return d.metadata.subscription_id;
+      // If the id starts with sxn_ it's a subscription id
+      if (d?.id && typeof d.id === 'string' && d.id.startsWith('sxn_')) return d.id;
+      return null;
     };
 
-    // === CHARGE SUCCEEDED (monthly/annual auto-charge) ===
-    const chargeSuccessEvents = [
-      'charge.creation.succeeded', 'charge.succeeded',
-      'subscription.charge.succeeded', 'subscription.creation.succeeded',
-    ];
-    if (chargeSuccessEvents.includes(eventType)) {
+    // Extract charge ID for failed charges (to find subscription)
+    const findChargeId = (d: any): string | null => {
+      if (d?.chargeId) return d.chargeId;
+      if (d?.charge_id) return d.charge_id;
+      if (d?.id && typeof d.id === 'string' && d.id.startsWith('chr_')) return d.id;
+      return null;
+    };
+
+    // === SUBSCRIPTION CREATION SUCCEEDED ===
+    if (eventType === 'subscription.creation.succeeded') {
+      const culqiSubscriptionId = findSubscriptionId(data);
+      console.log(`[CulqiWebhook] Subscription created confirmed: ${culqiSubscriptionId}`);
+      // We already activated locally when creating, so this is just confirmation
+      return;
+    }
+
+    // === CHARGE SUCCEEDED (recurring auto-charge) ===
+    if (eventType === 'charge.creation.succeeded') {
       const culqiSubscriptionId = findSubscriptionId(data);
       if (!culqiSubscriptionId) {
         console.log('[CulqiWebhook] No subscription ID found in charge.succeeded');
@@ -428,7 +455,6 @@ export class SubscriptionService {
         return;
       }
 
-      // Extend the period
       const now = new Date();
       const periodEnd = computePeriodEnd(now, subscription.planPrice.intervalCount, subscription.planPrice.intervalUnit);
 
@@ -447,38 +473,58 @@ export class SubscriptionService {
           subscriptionId: subscription.id,
           amount: subscription.planPrice.price,
           method: 'CARD',
-          notes: `Culqi cobro recurrente - ${data.id || data.charge_id || 'auto'}`,
+          notes: `Culqi cobro recurrente - ${findChargeId(data) || 'auto'}`,
           registeredBy: 'CULQI_WEBHOOK',
         },
       });
 
-      console.log(`[CulqiWebhook] Subscription ${subscription.id} renewed successfully`);
+      console.log(`[CulqiWebhook] Subscription ${subscription.id} renewed`);
       return;
     }
 
     // === CHARGE FAILED ===
-    const chargeFailedEvents = [
-      'charge.creation.failed', 'charge.failed',
-      'subscription.charge.failed', 'subscription.creation.failed',
-    ];
-    if (chargeFailedEvents.includes(eventType)) {
+    if (eventType === 'charge.creation.failed' || eventType === 'subscription.creation.failed') {
+      // charge.creation.failed doesn't include subscription_id
+      // Find the most recent ACTIVE subscription for the customer via chargeId
+      const chargeId = findChargeId(data);
       const culqiSubscriptionId = findSubscriptionId(data);
+
       if (culqiSubscriptionId) {
+        // Direct match by subscription ID
         await prisma.subscription.updateMany({
           where: { culqiSubscriptionId },
           data: { status: 'PAST_DUE' },
         });
-        console.log(`[CulqiWebhook] Subscription ${culqiSubscriptionId} marked as PAST_DUE`);
+        console.log(`[CulqiWebhook] Subscription ${culqiSubscriptionId} marked PAST_DUE`);
+        return;
+      }
+
+      if (chargeId) {
+        // No subscription_id in payload - find the most recently created ACTIVE subscription
+        // This works because charge.failed comes seconds after subscription creation
+        const recentSub = await prisma.subscription.findFirst({
+          where: {
+            status: 'ACTIVE',
+            culqiSubscriptionId: { not: null },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (recentSub) {
+          await prisma.subscription.update({
+            where: { id: recentSub.id },
+            data: { status: 'PAST_DUE' },
+          });
+          console.log(`[CulqiWebhook] Charge ${chargeId} failed -> Subscription ${recentSub.id} marked PAST_DUE`);
+        } else {
+          console.log(`[CulqiWebhook] Charge ${chargeId} failed but no matching subscription found`);
+        }
       }
       return;
     }
 
     // === SUBSCRIPTION CANCELLED ===
-    const cancelEvents = [
-      'subscription.cancelled', 'subscription.deleted',
-      'subscription.cancel', 'subscription.creation.cancelled',
-    ];
-    if (cancelEvents.includes(eventType)) {
+    if (eventType === 'subscription.cancelled' || eventType === 'subscription.deleted') {
       const culqiSubscriptionId = findSubscriptionId(data);
       if (culqiSubscriptionId) {
         await prisma.subscription.updateMany({
@@ -490,7 +536,7 @@ export class SubscriptionService {
       return;
     }
 
-    console.log(`[CulqiWebhook] Unhandled event type: ${eventType}`);
+    console.log(`[CulqiWebhook] Unhandled event: ${eventType}`);
   }
 
   async cancelSubscription(id: string) {
