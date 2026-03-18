@@ -7,7 +7,6 @@ import { EmailService } from '../email/email.service';
 import { HotelService } from '../hotel/hotel.service';
 import { success, error, hashPassword } from '../../utils';
 import { prisma } from '../../config';
-import { TRIAL_DAYS } from '../../shared';
 
 const publicService = new PublicService();
 const planService = new PlanService();
@@ -167,9 +166,6 @@ export class PublicController {
       }
 
       const hashedPassword = await hashPassword(password);
-      const now = new Date();
-      const trialEnd = new Date(now);
-      trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
 
       // Create hotel + subscription + admin user in a single transaction
       const result = await prisma.$transaction(async (tx) => {
@@ -188,9 +184,9 @@ export class PublicController {
         await tx.subscription.create({
           data: {
             hotelId: hotel.id,
-            status: 'TRIALING',
-            trialStartDate: now,
-            trialEndDate: trialEnd,
+            status: 'PENDING_PAYMENT',
+            totalPrice: 0,
+            paidAmount: 0,
           },
         });
 
@@ -234,7 +230,7 @@ export class PublicController {
       return success(res, {
         hotel: { id: result.hotel.id, name: result.hotel.name, slug: result.hotel.slug },
         user: { id: result.user.id, email: result.user.email, firstName: result.user.firstName },
-      }, 'Registro exitoso. Tu hotel esta listo con 7 dias de prueba gratis.', 201);
+      }, 'Registro exitoso. Selecciona un plan para comenzar a usar Mijatoo.', 201);
     } catch (err: any) {
       return error(res, err.message);
     }

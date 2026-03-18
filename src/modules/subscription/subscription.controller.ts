@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { SubscriptionService } from './subscription.service';
 import { success, error } from '../../utils/apiResponse';
+import { env } from '../../config/env';
 
 const subscriptionService = new SubscriptionService();
 
@@ -123,6 +124,42 @@ export class SubscriptionController {
       return success(res, subscription, 'Suscripcion cancelada');
     } catch (err: any) {
       return error(res, err.message);
+    }
+  }
+
+  async subscribeCulqi(req: Request, res: Response) {
+    try {
+      const hotelId = req.user!.hotelId;
+      if (!hotelId) return error(res, 'No tienes un hotel asignado', 400);
+      const subscription = await subscriptionService.createCulqiSubscription(
+        hotelId,
+        req.body.planPriceId,
+        req.body.culqiToken,
+        req.body.culqiEmail,
+      );
+      return success(res, subscription, 'Suscripcion activada exitosamente');
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
+  async getCulqiPublicKey(_req: Request, res: Response) {
+    try {
+      const publicKey = subscriptionService.getCulqiPublicKey();
+      if (!publicKey) return error(res, 'Culqi no esta configurado', 500);
+      return success(res, { publicKey });
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
+
+  async culqiWebhook(req: Request, res: Response) {
+    try {
+      await subscriptionService.handleCulqiWebhook(req.body);
+      return res.json({ received: true });
+    } catch (err: any) {
+      console.error('[CulqiWebhook] Error:', err.message);
+      return res.status(500).json({ error: err.message });
     }
   }
 

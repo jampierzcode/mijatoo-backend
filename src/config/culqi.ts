@@ -26,7 +26,10 @@ export class CulqiError extends Error {
 }
 
 async function culqiRequest({ method, path, body, secretKey }: CulqiRequestOptions): Promise<any> {
-  const response = await fetch(`${CULQI_API_URL}${path}`, {
+  const url = `${CULQI_API_URL}${path}`;
+  console.log(`[Culqi] ${method} ${url}`, body ? JSON.stringify(body) : '');
+
+  const response = await fetch(url, {
     method,
     headers: {
       'Authorization': `Bearer ${secretKey}`,
@@ -35,7 +38,16 @@ async function culqiRequest({ method, path, body, secretKey }: CulqiRequestOptio
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  console.log(`[Culqi] Response ${response.status}:`, text.substring(0, 500));
+
+  let data: any;
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(`Culqi devolvió respuesta no válida (${response.status}): ${text.substring(0, 200)}`);
+  }
+
   if (!response.ok) {
     throw new CulqiError(data, response.status);
   }
@@ -109,28 +121,37 @@ class CulqiJatoClient {
     this.secretKey = secretKey;
   }
 
-  // --- Plans ---
+  // --- Plans (recurrent) ---
+  // interval_unit_time: 1=dias, 2=semanas, 3=meses, 4=anios
   async createPlan(params: {
     name: string;
+    shortName: string;
     amount: number;
-    currencyCode?: string;
-    interval: 'dias' | 'semanas' | 'meses' | 'anios';
+    currency?: string;
+    intervalUnitTime: number; // 1=dias, 2=semanas, 3=meses, 4=anios
     intervalCount: number;
     description?: string;
     metadata?: Record<string, string>;
   }) {
     return culqiRequest({
       method: 'POST',
-      path: '/plans',
+      path: '/recurrent/plans/create',
       secretKey: this.secretKey,
       body: {
         name: params.name,
+        short_name: params.shortName,
         amount: params.amount,
-        currency_code: params.currencyCode || 'PEN',
-        interval: params.interval,
+        currency: params.currency || 'PEN',
+        interval_unit_time: params.intervalUnitTime,
         interval_count: params.intervalCount,
-        description: params.description,
-        metadata: params.metadata,
+        description: params.description || params.name,
+        initial_cycles: {
+          count: 0,
+          amount: 0,
+          has_initial_charge: false,
+          interval_unit_time: params.intervalUnitTime,
+        },
+        metadata: params.metadata || {},
       },
     });
   }
@@ -138,7 +159,7 @@ class CulqiJatoClient {
   async getPlan(planId: string) {
     return culqiRequest({
       method: 'GET',
-      path: `/plans/${planId}`,
+      path: `/recurrent/plans/${planId}`,
       secretKey: this.secretKey,
     });
   }
@@ -146,7 +167,7 @@ class CulqiJatoClient {
   async deletePlan(planId: string) {
     return culqiRequest({
       method: 'DELETE',
-      path: `/plans/${planId}`,
+      path: `/recurrent/plans/${planId}`,
       secretKey: this.secretKey,
     });
   }
@@ -168,9 +189,9 @@ class CulqiJatoClient {
         email: params.email,
         first_name: params.firstName,
         last_name: params.lastName,
-        phone_number: params.phone,
-        address: params.address,
-        address_city: params.addressCity,
+        phone_number: params.phone || '999999999',
+        address: params.address || 'Sin direccion',
+        address_city: params.addressCity || 'Lima',
         country_code: 'PE',
       },
     });
@@ -205,16 +226,17 @@ class CulqiJatoClient {
     });
   }
 
-  // --- Subscriptions ---
+  // --- Subscriptions (recurrent) ---
   async createSubscription(cardId: string, planId: string, metadata?: Record<string, string>) {
     return culqiRequest({
       method: 'POST',
-      path: '/subscriptions',
+      path: '/recurrent/subscriptions/create',
       secretKey: this.secretKey,
       body: {
         card_id: cardId,
         plan_id: planId,
-        metadata,
+        tyc: true, // aceptar terminos y condiciones (requerido)
+        metadata: metadata || {},
       },
     });
   }
@@ -222,7 +244,7 @@ class CulqiJatoClient {
   async getSubscription(subscriptionId: string) {
     return culqiRequest({
       method: 'GET',
-      path: `/subscriptions/${subscriptionId}`,
+      path: `/recurrent/subscriptions/${subscriptionId}`,
       secretKey: this.secretKey,
     });
   }
@@ -230,7 +252,7 @@ class CulqiJatoClient {
   async cancelSubscription(subscriptionId: string) {
     return culqiRequest({
       method: 'DELETE',
-      path: `/subscriptions/${subscriptionId}`,
+      path: `/recurrent/subscriptions/${subscriptionId}`,
       secretKey: this.secretKey,
     });
   }

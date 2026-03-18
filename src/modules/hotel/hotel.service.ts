@@ -1,7 +1,6 @@
 import { prisma } from '../../config';
 import { hashPassword } from '../../utils';
 import { UploadService } from '../upload/upload.service';
-import { TRIAL_DAYS } from '../../shared';
 
 export class HotelService {
   async findAll() {
@@ -34,18 +33,14 @@ export class HotelService {
     if (data.coverImageUrl) data.coverImageUrl = UploadService.normalizeForStorage(data.coverImageUrl);
     if (data.logoUrl) data.logoUrl = UploadService.normalizeForStorage(data.logoUrl);
 
-    const now = new Date();
-    const trialEnd = new Date(now);
-    trialEnd.setDate(trialEnd.getDate() + TRIAL_DAYS);
-
     const result = await prisma.$transaction(async (tx) => {
       const hotel = await tx.hotel.create({ data });
       await tx.subscription.create({
         data: {
           hotelId: hotel.id,
-          status: 'TRIALING',
-          trialStartDate: now,
-          trialEndDate: trialEnd,
+          status: 'PENDING_PAYMENT',
+          totalPrice: 0,
+          paidAmount: 0,
         },
       });
       return hotel;

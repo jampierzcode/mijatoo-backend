@@ -19,7 +19,7 @@ export const subscriptionCheck = async (req: Request, res: Response, next: NextF
     if (!isActive) {
       return res.status(403).json({
         success: false,
-        message: 'Tu suscripcion ha expirado. Contacta al administrador para renovar.',
+        message: 'Tu suscripcion ha expirado. Ve a Mi Cuenta para renovar.',
       });
     }
 

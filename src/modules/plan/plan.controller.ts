@@ -76,4 +76,13 @@ export class PlanController {
       return error(res, err.message);
     }
   }
+
+  async syncCulqi(_req: Request, res: Response) {
+    try {
+      const results = await planService.syncAllPricesToCulqi();
+      return success(res, results, `${results.length} precios sincronizados con Culqi`);
+    } catch (err: any) {
+      return error(res, err.message);
+    }
+  }
 }

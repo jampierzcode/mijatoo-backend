@@ -111,6 +111,7 @@ model Hotel {
   isActive        Boolean  @default(true)
   culqiPublicKey  String?
   culqiSecretKey  String?
+  culqiCustomerId String?
   checkInFrom     String?
   checkInUntil    String?
   checkOutUntil   String?
@@ -334,6 +335,7 @@ model PlanPrice {
   price         Float
   currency      String       @default("PEN")
   isActive      Boolean      @default(true)
+  culqiPlanId   String?
   createdAt     DateTime     @default(now())
 
   subscriptions Subscription[]

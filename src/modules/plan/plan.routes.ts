@@ -14,6 +14,9 @@ router.post('/', validate(createPlanSchema), (req, res) => controller.create(req
 router.put('/:id', validate(updatePlanSchema), (req, res) => controller.update(req, res));
 router.delete('/:id', (req, res) => controller.delete(req, res));
 
+// Culqi sync
+router.post('/sync-culqi', (req, res) => controller.syncCulqi(req, res));
+
 // Price routes
 router.post('/:id/prices', validate(createPlanPriceSchema), (req, res) => controller.createPrice(req, res));
 router.put('/:id/prices/:priceId', validate(updatePlanPriceSchema), (req, res) => controller.updatePrice(req, res));

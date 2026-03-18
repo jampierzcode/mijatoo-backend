@@ -1,15 +1,20 @@
 import { Router } from 'express';
 import { SubscriptionController } from './subscription.controller';
 import { auth, roleGuard, validate } from '../../middleware';
-import { Role, selectPlanSchema, registerSubscriptionPaymentSchema, createSubscriptionForHotelSchema } from '../../shared';
+import { Role, selectPlanSchema, registerSubscriptionPaymentSchema, createSubscriptionForHotelSchema, subscribeCulqiSchema } from '../../shared';
 
 const router = Router();
 const controller = new SubscriptionController();
+
+// Culqi webhook - public, no auth required
+router.post('/webhook/culqi', (req, res) => controller.culqiWebhook(req, res));
 
 // HOTEL_ADMIN routes - must be before SUPER_ADMIN guard
 router.get('/my', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => controller.findMy(req, res));
 router.get('/my/history', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => controller.getMyHistory(req, res));
 router.post('/select-plan', auth, roleGuard(Role.HOTEL_ADMIN), validate(selectPlanSchema), (req, res) => controller.selectPlan(req, res));
+router.post('/subscribe-culqi', auth, roleGuard(Role.HOTEL_ADMIN), validate(subscribeCulqiSchema), (req, res) => controller.subscribeCulqi(req, res));
+router.get('/culqi-public-key', auth, roleGuard(Role.HOTEL_ADMIN), (req, res) => controller.getCulqiPublicKey(req, res));
 
 // SUPER_ADMIN routes
 router.use(auth, roleGuard(Role.SUPER_ADMIN));

@@ -253,6 +253,12 @@ export const selectPlanSchema = z.object({
   isRenewal: z.boolean().optional(),
 });
 
+export const subscribeCulqiSchema = z.object({
+  planPriceId: z.string().uuid('ID de precio de plan inválido'),
+  culqiToken: z.string().min(1, 'Token de Culqi es requerido'),
+  culqiEmail: z.string().email('Email inválido').optional(),
+});
+
 export const registerSubscriptionPaymentSchema = z.object({
   amount: z.number().positive('El monto debe ser mayor a 0'),
   method: z.enum(['CASH', 'TRANSFER', 'YAPE', 'PLIN', 'CARD', 'OTHER']),

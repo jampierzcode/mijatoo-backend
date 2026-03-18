@@ -1,8 +1,12 @@
 import { prisma } from '../../config';
+import { culqiJato } from '../../config/culqi';
+import { env } from '../../config/env';
 import { TRIAL_DAYS } from '../../shared';
 import { EmailService } from '../email/email.service';
+import { PlanService } from '../plan/plan.service';
 
 const emailService = new EmailService();
+const planService = new PlanService();
 
 const INTERVAL_UNIT_LABELS: Record<string, string> = {
   DAY: 'dia',
@@ -239,9 +243,268 @@ export class SubscriptionService {
     });
   }
 
+  // =============================================
+  // Culqi Automatic Subscription
+  // =============================================
+
+  async createCulqiSubscription(hotelId: string, planPriceId: string, culqiToken: string, culqiEmail?: string) {
+    if (!culqiJato) throw new Error('Culqi no está configurado. Contacta al administrador.');
+
+    // 1. Validate planPrice and check it has a Culqi plan
+    const planPrice = await prisma.planPrice.findUnique({
+      where: { id: planPriceId },
+      include: { plan: true },
+    });
+    if (!planPrice || !planPrice.isActive || !planPrice.plan.isActive) {
+      throw new Error('Plan no disponible');
+    }
+    if (!planPrice.culqiPlanId) {
+      throw new Error('Este plan aun no esta configurado para pagos automaticos. Contacta al administrador.');
+    }
+
+    const culqiPlanId = planPrice.culqiPlanId;
+
+    // 2. Get hotel + admin user
+    const hotel = await prisma.hotel.findUnique({
+      where: { id: hotelId },
+      include: { users: { where: { role: 'HOTEL_ADMIN' }, take: 1 } },
+    });
+    const admin = hotel?.users[0];
+    if (!admin || !hotel) throw new Error('No se encontró el hotel o administrador');
+
+    // 3. Get or create Culqi Customer (stored on Hotel)
+    let culqiCustomerId: string;
+
+    if (hotel.culqiCustomerId) {
+      culqiCustomerId = hotel.culqiCustomerId;
+    } else {
+      const customerEmail = culqiEmail || admin.email;
+      const customer = await culqiJato.createCustomer({
+        email: customerEmail,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        phone: admin.phone || undefined,
+        address: hotel.address,
+        addressCity: hotel.city,
+      });
+      culqiCustomerId = customer.id;
+
+      // Save on hotel for future use
+      await prisma.hotel.update({
+        where: { id: hotelId },
+        data: { culqiCustomerId },
+      });
+    }
+
+    // 4. Save Card with token from frontend
+    const card = await culqiJato.saveCard(culqiCustomerId, culqiToken);
+
+    // 5. Cancel previous Culqi subscriptions BEFORE creating new one
+    //    Culqi doesn't allow 2 active subscriptions to the same plan for the same customer
+    //    We must cancel first, then create. If the new one fails, we restore locally.
+    const previousActiveSubs = await prisma.subscription.findMany({
+      where: {
+        hotelId,
+        status: { in: ['TRIALING', 'ACTIVE', 'PENDING_PAYMENT', 'PAST_DUE'] },
+      },
+    });
+
+    const cancelledCulqiIds: string[] = [];
+    for (const prev of previousActiveSubs) {
+      if (prev.culqiSubscriptionId) {
+        try {
+          await culqiJato.cancelSubscription(prev.culqiSubscriptionId);
+          cancelledCulqiIds.push(prev.culqiSubscriptionId);
+        } catch (err: any) {
+          console.log(`[Subscription] Culqi cancel ${prev.culqiSubscriptionId}: ${err.message} (may already be cancelled)`);
+        }
+      }
+    }
+
+    // 6. Create NEW Subscription in Culqi
+    let culqiSub: any;
+    try {
+      culqiSub = await culqiJato.createSubscription(card.id, culqiPlanId, {
+        hotel_id: hotelId,
+        plan_price_id: planPriceId,
+      });
+    } catch (err: any) {
+      console.error(`[Subscription] Culqi subscription failed: ${err.message}`);
+      throw new Error(err.userMessage || err.message || 'Error al procesar el pago. Tu suscripcion actual no fue afectada.');
+    }
+
+    // 7. Subscription created in Culqi (201) - charge is processing asynchronously
+    //    Culqi always returns status:1 initially (processing), then transitions to:
+    //    - status 3 (active/confirmed) if charge succeeds
+    //    - stays at 1 or webhook notifies if charge fails
+    //    We trust the 201 and activate locally. Webhooks handle failures (PAST_DUE).
+    console.log(`[Subscription] Culqi subscription created: ${culqiSub.id}`);
+
+    // 8. Expire previous subscriptions locally
+    await prisma.subscription.updateMany({
+      where: {
+        hotelId,
+        status: { in: ['TRIALING', 'ACTIVE', 'PENDING_PAYMENT', 'PAST_DUE'] },
+      },
+      data: { status: 'EXPIRED' },
+    });
+
+    // 8. Create local subscription as ACTIVE
+    const now = new Date();
+    const periodEnd = computePeriodEnd(now, planPrice.intervalCount, planPrice.intervalUnit);
+
+    const subscription = await prisma.subscription.create({
+      data: {
+        hotelId,
+        planPriceId,
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        totalPrice: planPrice.price,
+        paidAmount: planPrice.price,
+        culqiSubscriptionId: culqiSub.id,
+        culqiCustomerId,
+        culqiCardId: card.id,
+      },
+      include: subscriptionInclude,
+    });
+
+    // 9. Record payment
+    await prisma.subscriptionPayment.create({
+      data: {
+        subscriptionId: subscription.id,
+        amount: planPrice.price,
+        method: 'CARD',
+        notes: `Culqi suscripcion ${culqiSub.id}`,
+        registeredBy: 'CULQI_AUTO',
+      },
+    });
+
+    return subscription;
+  }
+
+  // Get Culqi public key for frontend
+  getCulqiPublicKey() {
+    return env.CULQI_PUBLIC_KEY || null;
+  }
+
+  // =============================================
+  // Culqi Webhook Handler
+  // =============================================
+
+  async handleCulqiWebhook(payload: any) {
+    // Culqi webhook payload can vary - log everything for debugging
+    console.log(`[CulqiWebhook] Full payload:`, JSON.stringify(payload).substring(0, 1000));
+
+    const eventType = payload.type || payload.event || payload.object;
+    const data = payload.data || payload;
+
+    console.log(`[CulqiWebhook] Event type: ${eventType}`);
+
+    // Find subscription ID from various possible locations in the payload
+    const findSubscriptionId = (d: any): string | null => {
+      return d.subscription_id || d.id || d.metadata?.subscription_id ||
+        d.data?.subscription_id || d.data?.id || null;
+    };
+
+    // === CHARGE SUCCEEDED (monthly/annual auto-charge) ===
+    const chargeSuccessEvents = [
+      'charge.creation.succeeded', 'charge.succeeded',
+      'subscription.charge.succeeded', 'subscription.creation.succeeded',
+    ];
+    if (chargeSuccessEvents.includes(eventType)) {
+      const culqiSubscriptionId = findSubscriptionId(data);
+      if (!culqiSubscriptionId) {
+        console.log('[CulqiWebhook] No subscription ID found in charge.succeeded');
+        return;
+      }
+
+      const subscription = await prisma.subscription.findFirst({
+        where: { culqiSubscriptionId },
+        include: { planPrice: true },
+      });
+      if (!subscription || !subscription.planPrice) {
+        console.log(`[CulqiWebhook] Subscription not found locally for: ${culqiSubscriptionId}`);
+        return;
+      }
+
+      // Extend the period
+      const now = new Date();
+      const periodEnd = computePeriodEnd(now, subscription.planPrice.intervalCount, subscription.planPrice.intervalUnit);
+
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: {
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd: periodEnd,
+          paidAmount: { increment: subscription.planPrice.price },
+        },
+      });
+
+      await prisma.subscriptionPayment.create({
+        data: {
+          subscriptionId: subscription.id,
+          amount: subscription.planPrice.price,
+          method: 'CARD',
+          notes: `Culqi cobro recurrente - ${data.id || data.charge_id || 'auto'}`,
+          registeredBy: 'CULQI_WEBHOOK',
+        },
+      });
+
+      console.log(`[CulqiWebhook] Subscription ${subscription.id} renewed successfully`);
+      return;
+    }
+
+    // === CHARGE FAILED ===
+    const chargeFailedEvents = [
+      'charge.creation.failed', 'charge.failed',
+      'subscription.charge.failed', 'subscription.creation.failed',
+    ];
+    if (chargeFailedEvents.includes(eventType)) {
+      const culqiSubscriptionId = findSubscriptionId(data);
+      if (culqiSubscriptionId) {
+        await prisma.subscription.updateMany({
+          where: { culqiSubscriptionId },
+          data: { status: 'PAST_DUE' },
+        });
+        console.log(`[CulqiWebhook] Subscription ${culqiSubscriptionId} marked as PAST_DUE`);
+      }
+      return;
+    }
+
+    // === SUBSCRIPTION CANCELLED ===
+    const cancelEvents = [
+      'subscription.cancelled', 'subscription.deleted',
+      'subscription.cancel', 'subscription.creation.cancelled',
+    ];
+    if (cancelEvents.includes(eventType)) {
+      const culqiSubscriptionId = findSubscriptionId(data);
+      if (culqiSubscriptionId) {
+        await prisma.subscription.updateMany({
+          where: { culqiSubscriptionId },
+          data: { status: 'CANCELLED', cancelledAt: new Date() },
+        });
+        console.log(`[CulqiWebhook] Subscription ${culqiSubscriptionId} cancelled`);
+      }
+      return;
+    }
+
+    console.log(`[CulqiWebhook] Unhandled event type: ${eventType}`);
+  }
+
   async cancelSubscription(id: string) {
     const subscription = await prisma.subscription.findUnique({ where: { id } });
     if (!subscription) throw new Error('Suscripcion no encontrada');
+
+    // Cancel in Culqi if it's a Culqi subscription
+    if (subscription.culqiSubscriptionId && culqiJato) {
+      try {
+        await culqiJato.cancelSubscription(subscription.culqiSubscriptionId);
+      } catch (err: any) {
+        console.error('[Subscription] Failed to cancel Culqi subscription:', err.message);
+      }
+    }
 
     return prisma.subscription.update({
       where: { id },
