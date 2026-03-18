@@ -441,6 +441,7 @@ export class ReservationService {
     guestFirstName: string; guestLastName: string;
     guestEmail: string; guestPhone?: string; checkOut: string;
     numberOfGuests: number; notes?: string;
+    documentType?: string; documentNumber?: string; saveAsGuest?: boolean;
   }) {
     const category = await prisma.roomCategory.findFirst({
       where: { id: data.categoryId, hotelId },
@@ -475,6 +476,45 @@ export class ReservationService {
     const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24));
     const totalPrice = nights * category.pricePerNight;
 
+    // Resolve guestId: save as guest if requested
+    let resolvedGuestId = data.guestId || null;
+    if (data.saveAsGuest && data.documentType && data.documentNumber) {
+      const existing = await prisma.guest.findUnique({
+        where: {
+          hotelId_documentType_documentNumber: {
+            hotelId,
+            documentType: data.documentType as any,
+            documentNumber: data.documentNumber,
+          },
+        },
+      });
+      if (existing) {
+        await prisma.guest.update({
+          where: { id: existing.id },
+          data: {
+            firstName: data.guestFirstName,
+            lastName: data.guestLastName,
+            email: data.guestEmail || existing.email,
+            phone: data.guestPhone || existing.phone,
+          },
+        });
+        resolvedGuestId = existing.id;
+      } else {
+        const guest = await prisma.guest.create({
+          data: {
+            hotelId,
+            documentType: data.documentType as any,
+            documentNumber: data.documentNumber,
+            firstName: data.guestFirstName,
+            lastName: data.guestLastName,
+            email: data.guestEmail || null,
+            phone: data.guestPhone || null,
+          },
+        });
+        resolvedGuestId = guest.id;
+      }
+    }
+
     return prisma.$transaction(async (tx) => {
       await tx.room.update({
         where: { id: availableRoom.id },
@@ -486,7 +526,7 @@ export class ReservationService {
           hotelId,
           categoryId: data.categoryId,
           roomId: availableRoom.id,
-          guestId: data.guestId || null,
+          guestId: resolvedGuestId,
           guestFirstName: data.guestFirstName,
           guestLastName: data.guestLastName,
           guestEmail: data.guestEmail,

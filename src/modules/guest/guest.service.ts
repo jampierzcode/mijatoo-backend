@@ -80,4 +80,21 @@ export class GuestService {
       take: 10,
     });
   }
+
+  async searchByName(hotelId: string, query: string) {
+    const terms = query.trim().split(/\s+/);
+    return prisma.guest.findMany({
+      where: {
+        hotelId,
+        AND: terms.map(term => ({
+          OR: [
+            { firstName: { contains: term, mode: 'insensitive' as const } },
+            { lastName: { contains: term, mode: 'insensitive' as const } },
+            { email: { contains: term, mode: 'insensitive' as const } },
+          ],
+        })),
+      },
+      take: 10,
+    });
+  }
 }

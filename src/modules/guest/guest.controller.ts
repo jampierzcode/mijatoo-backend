@@ -52,9 +52,15 @@ export class GuestController {
 
   async search(req: Request, res: Response) {
     try {
-      const query = req.query.document as string;
-      if (!query) return success(res, []);
-      const guests = await guestService.searchByDocument(req.hotelId!, query);
+      const docQuery = (req.query.document || req.query.documentNumber) as string;
+      const nameQuery = req.query.name as string;
+      if (!docQuery && !nameQuery) return success(res, []);
+      let guests;
+      if (docQuery) {
+        guests = await guestService.searchByDocument(req.hotelId!, docQuery);
+      } else {
+        guests = await guestService.searchByName(req.hotelId!, nameQuery);
+      }
       return success(res, guests);
     } catch (err: any) {
       return error(res, err.message);
